@@ -1,3 +1,8 @@
+/* ──────────────────────────────────────────────
+   Data — project & category definitions
+   (structure unchanged)
+   ────────────────────────────────────────────── */
+
 const projects = [
   {
     id: "exposicao-da-alma",
@@ -105,22 +110,130 @@ const categoryColors = {
   animacao: "#7B8B5A"
 };
 
-const $ = selector => document.querySelector(selector);
-const $$ = selector => document.querySelectorAll(selector);
+/* ──────────────────────────────────────────────
+   DOM helpers
+   ────────────────────────────────────────────── */
+
+const $ = (selector) => document.querySelector(selector);
+const $$ = (selector) => document.querySelectorAll(selector);
+
+/* ──────────────────────────────────────────────
+   Cached DOM elements (with safety checks)
+   ────────────────────────────────────────────── */
 
 const categoryGallery = $("#categoryGallery");
 const gallery = $("#gallery");
 const modal = $("#projectModal");
 const modalContent = $("#modalContent");
+const modalPanel = modal ? modal.querySelector(".modal-panel") : null;
 const navToggle = $("#navToggle");
 const mainNav = $("#mainNav");
 const header = $(".site-header");
 const navLinks = $$("[data-nav]");
 const sections = $$("section[id]");
 
+/* Track the element that opened the modal so we can restore focus */
+let previouslyFocusedElement = null;
+/* Track current filter */
+let currentFilter = "all";
+
+/* ──────────────────────────────────────────────
+   1. Scroll-based reveal animations
+      (IntersectionObserver)
+   ────────────────────────────────────────────── */
+
+function initScrollReveal() {
+  /* Respect prefers-reduced-motion */
+  const prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  const revealObserver = new IntersectionObserver(
+    (entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add("revealed");
+          revealObserver.unobserve(entry.target);
+        }
+      });
+    },
+    { threshold: 0.12, rootMargin: "0px 0px -40px 0px" }
+  );
+
+  /* Mark elements for reveal */
+  const revealTargets = [
+    ".hero-copy",
+    ".hero-projects",
+    ".process .section-shell > h2",
+    ".process .section-lead",
+    ".process-card",
+    ".about .section-kicker",
+    ".about-grid",
+    ".about-cta",
+    ".projects > .section-shell > h2",
+    ".projects-sub",
+    ".filter-bar",
+    ".category-gallery",
+    ".project-detail-head",
+    ".contact-heading",
+    ".contact-grid"
+  ];
+
+  revealTargets.forEach((selector) => {
+    $$(selector).forEach((el, i) => {
+      if (prefersReduced) {
+        el.classList.add("reveal-ready", "revealed");
+        return;
+      }
+      el.classList.add("reveal-ready");
+      el.style.transitionDelay = `${i * 0.07}s`;
+      revealObserver.observe(el);
+    });
+  });
+}
+
+/* ──────────────────────────────────────────────
+   2. Image loading states
+   ────────────────────────────────────────────── */
+
+function attachImageLoadHandlers(container) {
+  if (!container) return;
+  const images = container.querySelectorAll("img[loading='lazy'], img:not(.loaded)");
+  images.forEach((img) => {
+    /* Don't re-process already-handled images */
+    if (img.dataset.loadHandled) return;
+    img.dataset.loadHandled = "true";
+
+    const wrapper = img.closest(".card-thumb, .category-thumb, .hero-card");
+    if (wrapper) wrapper.classList.add("img-loading");
+
+    function onLoaded() {
+      img.classList.add("loaded");
+      if (wrapper) wrapper.classList.remove("img-loading");
+    }
+
+    if (img.complete && img.naturalWidth > 0) {
+      onLoaded();
+    } else {
+      img.addEventListener("load", onLoaded, { once: true });
+      img.addEventListener("error", () => {
+        img.classList.add("load-error");
+        if (wrapper) wrapper.classList.remove("img-loading");
+      }, { once: true });
+    }
+  });
+}
+
+/* ──────────────────────────────────────────────
+   3. Render categories
+   ────────────────────────────────────────────── */
+
 function renderCategories() {
-  categoryGallery.innerHTML = categories.map((category, index) => `
-    <button class="category-card ${category.key}" type="button" data-filter="${category.key}" aria-label="Ver categoria ${category.title}">
+  if (!categoryGallery) return;
+  categoryGallery.innerHTML = categories
+    .map(
+      (category, index) => `
+    <button class="category-card ${category.key}" type="button"
+            data-filter="${category.key}"
+            aria-label="Ver categoria ${category.title}">
       <div class="category-thumb">
         <img src="${category.image}" alt="${category.title}" loading="lazy" />
       </div>
@@ -130,14 +243,53 @@ function renderCategories() {
         <p>${category.description}</p>
       </div>
     </button>
-  `).join("");
+  `
+    )
+    .join("");
+
+  attachImageLoadHandlers(categoryGallery);
 }
 
-function renderProjects(filter = "all") {
-  const visibleProjects = filter === "all" ? projects : projects.filter(project => project.category === filter);
+/* ──────────────────────────────────────────────
+   4. Render projects with animated transitions
+   ────────────────────────────────────────────── */
 
-  gallery.innerHTML = visibleProjects.map(project => `
-    <button class="card ${project.category}" type="button" data-id="${project.id}" aria-label="Abrir projeto ${project.title}">
+function renderProjects(filter = "all") {
+  if (!gallery) return;
+  currentFilter = filter;
+
+  const visibleProjects =
+    filter === "all"
+      ? projects
+      : projects.filter((project) => project.category === filter);
+
+  const prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  /* Fade out existing cards before replacing */
+  const existingCards = gallery.querySelectorAll(".card");
+  if (existingCards.length > 0 && !prefersReduced) {
+    existingCards.forEach((card) => card.classList.add("card-exit"));
+
+    /* Wait for exit animation, then render new cards */
+    const onTransitionDone = () => {
+      insertProjectCards(visibleProjects, prefersReduced);
+    };
+    /* Use a short timeout matching the CSS exit transition */
+    setTimeout(onTransitionDone, 220);
+  } else {
+    insertProjectCards(visibleProjects, prefersReduced);
+  }
+}
+
+function insertProjectCards(visibleProjects, prefersReduced) {
+  gallery.innerHTML = visibleProjects
+    .map(
+      (project, index) => `
+    <button class="card ${project.category} ${prefersReduced ? "" : "card-enter"}"
+            type="button"
+            data-id="${project.id}"
+            aria-label="Abrir projeto ${project.title}"
+            style="--stagger: ${index}">
       <div class="card-thumb">
         <img src="${project.images[0]}" alt="${project.title}" loading="lazy" />
       </div>
@@ -150,23 +302,50 @@ function renderProjects(filter = "all") {
         <p>${project.technique}</p>
       </div>
     </button>
-  `).join("");
+  `
+    )
+    .join("");
+
+  attachImageLoadHandlers(gallery);
+
+  /* Trigger staggered entrance */
+  if (!prefersReduced) {
+    requestAnimationFrame(() => {
+      gallery.querySelectorAll(".card-enter").forEach((card) => {
+        card.classList.add("card-entered");
+      });
+    });
+  }
 }
 
+/* ──────────────────────────────────────────────
+   5. Filter buttons
+   ────────────────────────────────────────────── */
+
 function setActiveFilter(filter) {
-  $$(".filter").forEach(button => {
-    button.classList.toggle("active", button.dataset.filter === filter);
+  $$(".filter").forEach((button) => {
+    const isActive = button.dataset.filter === filter;
+    button.classList.toggle("active", isActive);
+    button.setAttribute("aria-pressed", String(isActive));
   });
 }
 
+/* ──────────────────────────────────────────────
+   6. Modal — open / close with animation,
+      focus trap & accessibility
+   ────────────────────────────────────────────── */
+
 function openProject(id) {
-  const project = projects.find(item => item.id === id);
-  if (!project) return;
+  const project = projects.find((item) => item.id === id);
+  if (!project || !modal || !modalContent) return;
+
+  /* Save focus origin */
+  previouslyFocusedElement = document.activeElement;
 
   modalContent.innerHTML = `
     <div class="modal-hero" style="--accent:${categoryColors[project.category]}">
       <div class="modal-gallery">
-        ${project.images.map(image => `<img src="${image}" alt="${project.title}" />`).join("")}
+        ${project.images.map((image) => `<img src="${image}" alt="${project.title}" />`).join("")}
       </div>
       <div class="modal-info">
         <span class="cat-badge">${project.categoryLabel}</span>
@@ -181,76 +360,287 @@ function openProject(id) {
     </div>
   `;
 
+  attachImageLoadHandlers(modalContent);
+
+  /* Show modal with animation */
   modal.classList.add("open");
   modal.setAttribute("aria-hidden", "false");
   document.body.style.overflow = "hidden";
+
+  /* Trigger enter animation on next frame */
+  requestAnimationFrame(() => {
+    modal.classList.add("modal-visible");
+  });
+
+  /* Move focus into the modal */
+  const closeBtn = modal.querySelector(".modal-close");
+  if (closeBtn) closeBtn.focus();
 }
 
 function closeModal() {
-  modal.classList.remove("open");
-  modal.setAttribute("aria-hidden", "true");
-  document.body.style.overflow = "";
+  if (!modal) return;
+  if (!modal.classList.contains("open")) return;
+
+  const prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  modal.classList.remove("modal-visible");
+
+  const finishClose = () => {
+    modal.classList.remove("open");
+    modal.setAttribute("aria-hidden", "true");
+    document.body.style.overflow = "";
+
+    /* Restore focus to the element that opened the modal */
+    if (previouslyFocusedElement && typeof previouslyFocusedElement.focus === "function") {
+      previouslyFocusedElement.focus();
+      previouslyFocusedElement = null;
+    }
+  };
+
+  if (prefersReduced) {
+    finishClose();
+  } else {
+    /* Wait for CSS exit transition */
+    setTimeout(finishClose, 320);
+  }
 }
+
+/* Focus trap within the modal */
+function trapFocus(event) {
+  if (!modal || !modal.classList.contains("open")) return;
+
+  const focusable = modal.querySelectorAll(
+    'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+  );
+  if (focusable.length === 0) return;
+
+  const first = focusable[0];
+  const last = focusable[focusable.length - 1];
+
+  if (event.shiftKey && document.activeElement === first) {
+    event.preventDefault();
+    last.focus();
+  } else if (!event.shiftKey && document.activeElement === last) {
+    event.preventDefault();
+    first.focus();
+  }
+}
+
+/* ──────────────────────────────────────────────
+   7. Active navigation highlight on scroll
+   ────────────────────────────────────────────── */
+
+let scrollTicking = false;
 
 function updateActiveNav() {
-  const y = window.scrollY;
-  header.classList.toggle("scrolled", y > 40);
+  if (scrollTicking) return;
+  scrollTicking = true;
 
-  let current = "home";
-  sections.forEach(section => {
-    if (y >= section.offsetTop - 180) current = section.id;
-  });
+  requestAnimationFrame(() => {
+    const y = window.scrollY;
+    if (header) header.classList.toggle("scrolled", y > 40);
 
-  const navTarget = current === "processo" ? "home" : current;
-  navLinks.forEach(link => {
-    link.classList.toggle("active", link.getAttribute("href") === `#${navTarget}`);
+    let current = "home";
+    sections.forEach((section) => {
+      if (y >= section.offsetTop - 180) current = section.id;
+    });
+
+    const navTarget = current === "processo" ? "home" : current;
+    navLinks.forEach((link) => {
+      const isActive = link.getAttribute("href") === `#${navTarget}`;
+      link.classList.toggle("active", isActive);
+      link.setAttribute("aria-current", isActive ? "page" : "false");
+    });
+
+    scrollTicking = false;
   });
 }
 
-$$(".filter").forEach(button => {
-  button.addEventListener("click", () => {
-    setActiveFilter(button.dataset.filter);
-    renderProjects(button.dataset.filter);
+/* ──────────────────────────────────────────────
+   8. Hero heading reveal / typing effect
+   ────────────────────────────────────────────── */
+
+function initHeroReveal() {
+  const heading = $(".hero-copy h1");
+  if (!heading) return;
+
+  const prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (prefersReduced) return;
+
+  const text = heading.textContent;
+  heading.innerHTML = "";
+  heading.classList.add("hero-reveal");
+  heading.setAttribute("aria-label", text);
+
+  /* Split into words and wrap each in a span */
+  const words = text.split(/\s+/);
+  words.forEach((word, i) => {
+    const span = document.createElement("span");
+    span.classList.add("hero-word");
+    span.style.setProperty("--word-i", String(i));
+    span.textContent = word;
+    /* Role presentation so screen readers read aria-label instead */
+    span.setAttribute("aria-hidden", "true");
+    heading.appendChild(span);
+
+    /* Add a space between words */
+    if (i < words.length - 1) {
+      heading.appendChild(document.createTextNode(" "));
+    }
   });
-});
 
-categoryGallery.addEventListener("click", event => {
-  const card = event.target.closest(".category-card");
-  if (!card) return;
-
-  setActiveFilter(card.dataset.filter);
-  renderProjects(card.dataset.filter);
-  gallery.scrollIntoView({ behavior: "smooth", block: "start" });
-});
-
-gallery.addEventListener("click", event => {
-  const card = event.target.closest(".card");
-  if (card) openProject(card.dataset.id);
-});
-
-navToggle.addEventListener("click", () => {
-  const isOpen = mainNav.classList.toggle("open");
-  navToggle.setAttribute("aria-expanded", String(isOpen));
-});
-
-navLinks.forEach(link => {
-  link.addEventListener("click", () => {
-    mainNav.classList.remove("open");
-    navToggle.setAttribute("aria-expanded", "false");
+  /* Trigger animation */
+  requestAnimationFrame(() => {
+    heading.classList.add("hero-reveal--active");
   });
-});
+}
 
-$$("[data-close-modal]").forEach(element => {
-  element.addEventListener("click", closeModal);
-});
+/* ──────────────────────────────────────────────
+   9. Event listeners
+   ────────────────────────────────────────────── */
 
-document.addEventListener("keydown", event => {
-  if (event.key === "Escape") closeModal();
-});
+function initEventListeners() {
+  /* Filter buttons */
+  $$(".filter").forEach((button) => {
+    button.setAttribute("aria-pressed", button.classList.contains("active") ? "true" : "false");
+    button.addEventListener("click", () => {
+      setActiveFilter(button.dataset.filter);
+      renderProjects(button.dataset.filter);
+    });
+  });
 
-window.addEventListener("scroll", updateActiveNav, { passive: true });
+  /* Category gallery click */
+  if (categoryGallery) {
+    categoryGallery.addEventListener("click", (event) => {
+      const card = event.target.closest(".category-card");
+      if (!card) return;
 
-$("#year").textContent = new Date().getFullYear();
-renderCategories();
-renderProjects();
-updateActiveNav();
+      setActiveFilter(card.dataset.filter);
+      renderProjects(card.dataset.filter);
+      gallery.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  }
+
+  /* Project gallery click (event delegation) */
+  if (gallery) {
+    gallery.addEventListener("click", (event) => {
+      const card = event.target.closest(".card");
+      if (card) openProject(card.dataset.id);
+    });
+  }
+
+  /* Navigation toggle (mobile) */
+  if (navToggle && mainNav) {
+    navToggle.addEventListener("click", () => {
+      const isOpen = mainNav.classList.toggle("open");
+      navToggle.setAttribute("aria-expanded", String(isOpen));
+    });
+  }
+
+  /* Close mobile nav on link click */
+  navLinks.forEach((link) => {
+    link.addEventListener("click", () => {
+      if (mainNav) mainNav.classList.remove("open");
+      if (navToggle) navToggle.setAttribute("aria-expanded", "false");
+    });
+  });
+
+  /* Close modal buttons */
+  $$("[data-close-modal]").forEach((element) => {
+    element.addEventListener("click", closeModal);
+  });
+
+  /* Keyboard: Escape to close modal, Tab for focus trap */
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") {
+      closeModal();
+      /* Also close mobile nav */
+      if (mainNav && mainNav.classList.contains("open")) {
+        mainNav.classList.remove("open");
+        if (navToggle) navToggle.setAttribute("aria-expanded", "false");
+      }
+    }
+    if (event.key === "Tab") {
+      trapFocus(event);
+    }
+  });
+
+  /* Scroll listener — throttled via rAF */
+  window.addEventListener("scroll", updateActiveNav, { passive: true });
+}
+
+/* ──────────────────────────────────────────────
+   10. Initialise
+   ────────────────────────────────────────────── */
+
+function init() {
+  /* Year in footer */
+  const yearEl = $("#year");
+  if (yearEl) $("#year").textContent = new Date().getFullYear();
+  renderCategories();
+  renderProjects();
+  updateActiveNav();
+
+  /* ==========================================================================
+     Scroll Reveal Animation System
+     ========================================================================== */
+  (function initReveal() {
+    const revealTargets = [
+      ".hero-shell",
+      ".process .section-shell",
+      ".about .section-shell",
+      ".filter-bar",
+      ".category-gallery",
+      ".project-detail-head",
+      ".gallery",
+      ".contact .section-shell",
+      ".site-footer"
+    ];
+
+    // Add reveal class to all targets
+    revealTargets.forEach(selector => {
+      const el = document.querySelector(selector);
+      if (el) el.classList.add("reveal");
+    });
+
+    // Use IntersectionObserver for performant scroll detection
+    if ("IntersectionObserver" in window) {
+      const observer = new IntersectionObserver(
+        (entries) => {
+          entries.forEach(entry => {
+            if (entry.isIntersecting) {
+              entry.target.classList.add("visible");
+              observer.unobserve(entry.target); // Only animate once
+            }
+          });
+        },
+        {
+          threshold: 0.12,
+          rootMargin: "0px 0px -40px 0px"
+        }
+      );
+
+      document.querySelectorAll(".reveal").forEach(el => observer.observe(el));
+    } else {
+      // Fallback: show everything immediately
+      document.querySelectorAll(".reveal").forEach(el => el.classList.add("visible"));
+    }
+  })();
+
+  /* Set up interactions */
+  initEventListeners();
+
+  /* Animations */
+  initHeroReveal();
+  initScrollReveal();
+
+  /* Handle initial image loads (hero section etc.) */
+  attachImageLoadHandlers(document.body);
+}
+
+/* Run when DOM is ready (script is at end of body, so this is essentially immediate) */
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", init);
+} else {
+  init();
+}
