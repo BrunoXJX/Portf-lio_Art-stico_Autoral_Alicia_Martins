@@ -123,6 +123,7 @@ const $$ = (selector) => document.querySelectorAll(selector);
 
 const categoryGallery = $("#categoryGallery");
 const gallery = $("#gallery");
+const projectDetails = $("#detalhados");
 const modal = $("#projectModal");
 const modalContent = $("#modalContent");
 const modalPanel = modal ? modal.querySelector(".modal-panel") : null;
@@ -348,7 +349,8 @@ function getInitialProjectFilter() {
   return validFilters.includes(requestedFilter) ? requestedFilter : "all";
 }
 
-function updateProjectUrl(filter) {
+function updateProjectUrl(filter, options = {}) {
+  const { hash = "" } = options;
   if (document.body.dataset.page !== "projetos" || !window.history.replaceState) return;
 
   const nextUrl = new URL(window.location.href);
@@ -357,7 +359,7 @@ function updateProjectUrl(filter) {
   } else {
     nextUrl.searchParams.set("categoria", filter);
   }
-  nextUrl.hash = "";
+  nextUrl.hash = hash;
   window.history.replaceState({}, "", nextUrl);
 }
 
@@ -378,6 +380,24 @@ function clearProjectHash() {
   const nextUrl = new URL(window.location.href);
   nextUrl.hash = "";
   window.history.replaceState({}, "", nextUrl);
+}
+
+function scrollToProjectDetailsIfRequested() {
+  if (document.body.dataset.page !== "projetos") return;
+  if (window.location.hash !== "#detalhados" || !projectDetails) return;
+
+  const scrollToDetails = () => {
+    projectDetails.scrollIntoView({ behavior: "auto", block: "start" });
+  };
+
+  requestAnimationFrame(scrollToDetails);
+  setTimeout(scrollToDetails, 150);
+
+  if (document.readyState !== "complete") {
+    window.addEventListener("load", () => {
+      setTimeout(scrollToDetails, 50);
+    }, { once: true });
+  }
 }
 
 /* ──────────────────────────────────────────────
@@ -465,6 +485,11 @@ function closeModal() {
 
 function openProjectFromHash() {
   if (document.body.dataset.page !== "projetos") return;
+
+  if (window.location.hash === "#detalhados") {
+    scrollToProjectDetailsIfRequested();
+    return;
+  }
 
   const hashProject = getProjectFromHash();
   if (!hashProject) {
@@ -602,8 +627,8 @@ function initEventListeners() {
 
       setActiveFilter(card.dataset.filter);
       renderProjects(card.dataset.filter);
-      updateProjectUrl(card.dataset.filter);
-      if (gallery) gallery.scrollIntoView({ behavior: "smooth", block: "start" });
+      updateProjectUrl(card.dataset.filter, { hash: "detalhados" });
+      if (projectDetails) projectDetails.scrollIntoView({ behavior: "smooth", block: "start" });
     });
   }
 
@@ -727,6 +752,7 @@ function init() {
 
   /* Handle initial image loads (hero section etc.) */
   attachImageLoadHandlers(document.body);
+  scrollToProjectDetailsIfRequested();
   openProjectFromHash();
 }
 

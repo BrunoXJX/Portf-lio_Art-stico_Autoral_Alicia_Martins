@@ -481,6 +481,14 @@ button {
   margin: 22px 0 34px;
 }
 
+.filter-bar--details {
+  margin: 0 0 34px;
+}
+
+.project-details {
+  scroll-margin-top: 96px;
+}
+
 .filter {
   cursor: pointer;
   transition: all var(--transition);
@@ -575,7 +583,7 @@ button {
   align-items: flex-end;
   justify-content: space-between;
   gap: 24px;
-  margin-bottom: 24px;
+  margin-bottom: 18px;
   padding-top: 28px;
   border-top: 1px solid var(--line);
 }

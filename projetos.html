@@ -34,20 +34,23 @@
         <h1>Projetos</h1>
         <p class="projects-sub">Trabalhos organizados por categoria.</p>
 
-        <div class="filter-bar" role="group" aria-label="Filtrar projetos">
-          <button class="filter active" type="button" data-filter="all">Todos</button>
-          <button class="filter" type="button" data-filter="pintura">Pintura</button>
-          <button class="filter" type="button" data-filter="digital">Ilustração digital</button>
-          <button class="filter" type="button" data-filter="animacao">Animação</button>
-        </div>
-
         <div class="category-gallery" id="categoryGallery"></div>
 
-        <div class="project-detail-head">
-          <h2>Projetos detalhados</h2>
-          <a href="#processo">Projetos em desenvolvimento</a>
-        </div>
-        <div class="gallery" id="gallery"></div>
+        <section class="project-details" id="detalhados" aria-labelledby="project-details-title">
+          <header class="project-detail-head">
+            <h2 id="project-details-title">Projetos detalhados</h2>
+            <a href="#processo">Projetos em desenvolvimento</a>
+          </header>
+
+          <div class="filter-bar filter-bar--details" role="group" aria-label="Filtrar projetos detalhados">
+            <button class="filter active" type="button" data-filter="all">Todos</button>
+            <button class="filter" type="button" data-filter="pintura">Pintura</button>
+            <button class="filter" type="button" data-filter="digital">Ilustração digital</button>
+            <button class="filter" type="button" data-filter="animacao">Animação</button>
+          </div>
+
+          <div class="gallery" id="gallery"></div>
+        </section>
       </div>
     </section>
 
