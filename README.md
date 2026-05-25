@@ -1,6 +1,6 @@
 # Portfólio Alicia Martins
 
-Projeto estático em HTML, CSS e JavaScript para abrir no Visual Studio Code.
+Projeto estático em HTML, CSS e JavaScript, organizado em páginas separadas para Home, Sobre Mim, Projetos e Contacto.
 
 ## Como abrir
 
@@ -16,6 +16,9 @@ Também podes abrir diretamente o ficheiro `index.html` no navegador.
 ```txt
 portfolio-alicia/
 ├── index.html
+├── sobre.html
+├── projetos.html
+├── contacto.html
 ├── css/
 │   └── style.css
 ├── js/
@@ -26,7 +29,10 @@ portfolio-alicia/
 
 ## Onde editar
 
-- Textos principais: `index.html`
+- Home: `index.html`
+- Sobre Mim: `sobre.html`
+- Projetos e modal de detalhes: `projetos.html` e `js/main.js`
+- Contactos: `contacto.html`
 - Projetos, descrições, imagens e competências: `js/main.js`
 - Cores, grelha, responsividade e visual: `css/style.css`
 - Imagens: `assets/img/`

@@ -130,12 +130,12 @@ const navToggle = $("#navToggle");
 const mainNav = $("#mainNav");
 const header = $(".site-header");
 const navLinks = $$("[data-nav]");
-const sections = $$("section[id]");
 
 /* Track the element that opened the modal so we can restore focus */
 let previouslyFocusedElement = null;
 /* Track current filter */
 let currentFilter = "all";
+const validFilters = ["all", ...categories.map((category) => category.key)];
 
 /* ──────────────────────────────────────────────
    1. Scroll-based reveal animations
@@ -231,7 +231,8 @@ function renderCategories() {
   categoryGallery.innerHTML = categories
     .map(
       (category, index) => `
-    <button class="category-card ${category.key}" type="button"
+    <a class="category-card ${category.key}"
+            href="projetos.html?categoria=${category.key}"
             data-filter="${category.key}"
             aria-label="Ver categoria ${category.title}">
       <div class="category-thumb">
@@ -242,7 +243,7 @@ function renderCategories() {
         <h3>${category.title}</h3>
         <p>${category.description}</p>
       </div>
-    </button>
+    </a>
   `
     )
     .join("");
@@ -285,8 +286,9 @@ function insertProjectCards(visibleProjects, prefersReduced) {
   gallery.innerHTML = visibleProjects
     .map(
       (project, index) => `
-    <button class="card ${project.category} ${prefersReduced ? "" : "card-enter"}"
-            type="button"
+    <a class="card ${project.category} ${prefersReduced ? "" : "card-enter"}"
+            id="${project.id}"
+            href="projetos.html#${project.id}"
             data-id="${project.id}"
             aria-label="Abrir projeto ${project.title}"
             style="--stagger: ${index}">
@@ -301,7 +303,7 @@ function insertProjectCards(visibleProjects, prefersReduced) {
         <h3>${project.title}</h3>
         <p>${project.technique}</p>
       </div>
-    </button>
+    </a>
   `
     )
     .join("");
@@ -330,14 +332,65 @@ function setActiveFilter(filter) {
   });
 }
 
+function getProjectFromHash() {
+  if (!window.location.hash) return null;
+
+  const id = decodeURIComponent(window.location.hash.slice(1));
+  return projects.find((project) => project.id === id) || null;
+}
+
+function getInitialProjectFilter() {
+  const hashProject = getProjectFromHash();
+  if (hashProject) return hashProject.category;
+
+  const params = new URLSearchParams(window.location.search);
+  const requestedFilter = params.get("categoria");
+  return validFilters.includes(requestedFilter) ? requestedFilter : "all";
+}
+
+function updateProjectUrl(filter) {
+  if (document.body.dataset.page !== "projetos" || !window.history.replaceState) return;
+
+  const nextUrl = new URL(window.location.href);
+  if (filter === "all") {
+    nextUrl.searchParams.delete("categoria");
+  } else {
+    nextUrl.searchParams.set("categoria", filter);
+  }
+  nextUrl.hash = "";
+  window.history.replaceState({}, "", nextUrl);
+}
+
+function updateProjectHash(id) {
+  if (document.body.dataset.page !== "projetos" || !window.history.pushState) return;
+  if (window.location.hash === `#${id}`) return;
+
+  const nextUrl = new URL(window.location.href);
+  nextUrl.hash = id;
+  window.history.pushState({}, "", nextUrl);
+}
+
+function clearProjectHash() {
+  if (!window.location.hash || !window.history.replaceState) return;
+  const hashProject = getProjectFromHash();
+  if (!hashProject) return;
+
+  const nextUrl = new URL(window.location.href);
+  nextUrl.hash = "";
+  window.history.replaceState({}, "", nextUrl);
+}
+
 /* ──────────────────────────────────────────────
    6. Modal — open / close with animation,
       focus trap & accessibility
    ────────────────────────────────────────────── */
 
-function openProject(id) {
+function openProject(id, options = {}) {
+  const { updateHash = true } = options;
   const project = projects.find((item) => item.id === id);
   if (!project || !modal || !modalContent) return;
+
+  if (updateHash) updateProjectHash(id);
 
   /* Save focus origin */
   previouslyFocusedElement = document.activeElement;
@@ -349,7 +402,7 @@ function openProject(id) {
       </div>
       <div class="modal-info">
         <span class="cat-badge">${project.categoryLabel}</span>
-        <h2>${project.title}</h2>
+        <h2 id="projectModalTitle">${project.title}</h2>
         <p>${project.description}</p>
         <div class="info-grid">
           <div><strong>Ano</strong><span>${project.year}</span></div>
@@ -363,6 +416,8 @@ function openProject(id) {
   attachImageLoadHandlers(modalContent);
 
   /* Show modal with animation */
+  modal.hidden = false;
+  modal.removeAttribute("inert");
   modal.classList.add("open");
   modal.setAttribute("aria-hidden", "false");
   document.body.style.overflow = "hidden";
@@ -388,7 +443,10 @@ function closeModal() {
   const finishClose = () => {
     modal.classList.remove("open");
     modal.setAttribute("aria-hidden", "true");
+    modal.setAttribute("inert", "");
+    modal.hidden = true;
     document.body.style.overflow = "";
+    clearProjectHash();
 
     /* Restore focus to the element that opened the modal */
     if (previouslyFocusedElement && typeof previouslyFocusedElement.focus === "function") {
@@ -403,6 +461,20 @@ function closeModal() {
     /* Wait for CSS exit transition */
     setTimeout(finishClose, 320);
   }
+}
+
+function openProjectFromHash() {
+  if (document.body.dataset.page !== "projetos") return;
+
+  const hashProject = getProjectFromHash();
+  if (!hashProject) {
+    closeModal();
+    return;
+  }
+
+  setActiveFilter(hashProject.category);
+  renderProjects(hashProject.category);
+  openProject(hashProject.id, { updateHash: false });
 }
 
 /* Focus trap within the modal */
@@ -427,10 +499,33 @@ function trapFocus(event) {
 }
 
 /* ──────────────────────────────────────────────
-   7. Active navigation highlight on scroll
+   7. Active navigation highlight
    ────────────────────────────────────────────── */
 
 let scrollTicking = false;
+
+function getCurrentPage() {
+  if (document.body.dataset.page) return document.body.dataset.page;
+
+  const fileName = window.location.pathname.split("/").pop() || "index.html";
+  const pageByFile = {
+    "index.html": "home",
+    "sobre.html": "sobre",
+    "projetos.html": "projetos",
+    "contacto.html": "contacto"
+  };
+
+  return pageByFile[fileName] || "home";
+}
+
+function setActivePageNav() {
+  const currentPage = getCurrentPage();
+  navLinks.forEach((link) => {
+    const isActive = link.dataset.nav === currentPage;
+    link.classList.toggle("active", isActive);
+    link.setAttribute("aria-current", isActive ? "page" : "false");
+  });
+}
 
 function updateActiveNav() {
   if (scrollTicking) return;
@@ -439,19 +534,7 @@ function updateActiveNav() {
   requestAnimationFrame(() => {
     const y = window.scrollY;
     if (header) header.classList.toggle("scrolled", y > 40);
-
-    let current = "home";
-    sections.forEach((section) => {
-      if (y >= section.offsetTop - 180) current = section.id;
-    });
-
-    const navTarget = current === "processo" ? "home" : current;
-    navLinks.forEach((link) => {
-      const isActive = link.getAttribute("href") === `#${navTarget}`;
-      link.classList.toggle("active", isActive);
-      link.setAttribute("aria-current", isActive ? "page" : "false");
-    });
-
+    setActivePageNav();
     scrollTicking = false;
   });
 }
@@ -506,6 +589,7 @@ function initEventListeners() {
     button.addEventListener("click", () => {
       setActiveFilter(button.dataset.filter);
       renderProjects(button.dataset.filter);
+      updateProjectUrl(button.dataset.filter);
     });
   });
 
@@ -514,10 +598,12 @@ function initEventListeners() {
     categoryGallery.addEventListener("click", (event) => {
       const card = event.target.closest(".category-card");
       if (!card) return;
+      event.preventDefault();
 
       setActiveFilter(card.dataset.filter);
       renderProjects(card.dataset.filter);
-      gallery.scrollIntoView({ behavior: "smooth", block: "start" });
+      updateProjectUrl(card.dataset.filter);
+      if (gallery) gallery.scrollIntoView({ behavior: "smooth", block: "start" });
     });
   }
 
@@ -525,7 +611,9 @@ function initEventListeners() {
   if (gallery) {
     gallery.addEventListener("click", (event) => {
       const card = event.target.closest(".card");
-      if (card) openProject(card.dataset.id);
+      if (!card) return;
+      event.preventDefault();
+      openProject(card.dataset.id);
     });
   }
 
@@ -567,6 +655,7 @@ function initEventListeners() {
 
   /* Scroll listener — throttled via rAF */
   window.addEventListener("scroll", updateActiveNav, { passive: true });
+  window.addEventListener("hashchange", openProjectFromHash);
 }
 
 /* ──────────────────────────────────────────────
@@ -577,8 +666,10 @@ function init() {
   /* Year in footer */
   const yearEl = $("#year");
   if (yearEl) $("#year").textContent = new Date().getFullYear();
+  const initialFilter = getInitialProjectFilter();
   renderCategories();
-  renderProjects();
+  setActiveFilter(initialFilter);
+  renderProjects(initialFilter);
   updateActiveNav();
 
   /* ==========================================================================
@@ -636,6 +727,7 @@ function init() {
 
   /* Handle initial image loads (hero section etc.) */
   attachImageLoadHandlers(document.body);
+  openProjectFromHash();
 }
 
 /* Run when DOM is ready (script is at end of body, so this is essentially immediate) */

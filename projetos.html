@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Projetos — Alicia Martins</title>
+  <meta name="description" content="Projetos de Alicia Martins organizados por pintura, ilustração digital e animação." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,400;1,500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body data-page="projetos">
+  <header class="site-header" id="topo">
+    <a class="brand" href="index.html" aria-label="Voltar ao início">
+      <span class="brand-mark">A</span>
+      <span class="brand-text">Alicia Martins</span>
+    </a>
+    <button class="nav-toggle" id="navToggle" type="button" aria-label="Abrir menu" aria-expanded="false">
+      <span></span>
+      <span></span>
+    </button>
+    <nav class="main-nav" id="mainNav" aria-label="Navegação principal">
+      <a href="index.html" data-nav="home">Home</a>
+      <a href="sobre.html" data-nav="sobre">Sobre Mim</a>
+      <a href="projetos.html" data-nav="projetos">Projetos</a>
+      <a href="contacto.html" data-nav="contacto">Contacto</a>
+    </nav>
+  </header>
+
+  <main class="page-main">
+    <section class="projects" id="projetos">
+      <div class="section-shell">
+        <h1>Projetos</h1>
+        <p class="projects-sub">Trabalhos organizados por categoria.</p>
+
+        <div class="filter-bar" role="group" aria-label="Filtrar projetos">
+          <button class="filter active" type="button" data-filter="all">Todos</button>
+          <button class="filter" type="button" data-filter="pintura">Pintura</button>
+          <button class="filter" type="button" data-filter="digital">Ilustração digital</button>
+          <button class="filter" type="button" data-filter="animacao">Animação</button>
+        </div>
+
+        <div class="category-gallery" id="categoryGallery"></div>
+
+        <div class="project-detail-head">
+          <h2>Projetos detalhados</h2>
+          <a href="#processo">Projetos em desenvolvimento</a>
+        </div>
+        <div class="gallery" id="gallery"></div>
+      </div>
+    </section>
+
+    <section class="process" id="processo">
+      <div class="section-shell">
+        <h2 class="underlined-title">Projetos em desenvolvimento</h2>
+        <p class="section-lead">Um olhar breve sobre a forma como os trabalhos nascem, evoluem e se preparam para serem apresentados no portfólio.</p>
+
+        <div class="process-steps">
+          <article class="process-card">
+            <span>01</span>
+            <h3>Ideia</h3>
+            <p>Definição do conceito, referências visuais e intenção expressiva.</p>
+          </article>
+          <article class="process-card">
+            <span>02</span>
+            <h3>Em desenvolvimento</h3>
+            <p>Composição, estudos, escolha cromática e desenvolvimento técnico.</p>
+          </article>
+          <article class="process-card">
+            <span>03</span>
+            <h3>Resultado esperado</h3>
+            <p>Apresentação final da obra com descrição, técnica e competências.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <p>© <span id="year"></span> Alicia Martins — Portfólio Artístico Autoral</p>
+    <a href="#topo">Topo</a>
+  </footer>
+
+  <div class="modal" id="projectModal" hidden inert aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="projectModalTitle">
+    <div class="modal-backdrop" data-close-modal></div>
+    <article class="modal-panel" role="document">
+      <button class="modal-close" type="button" data-close-modal aria-label="Fechar projeto">
+        ×
+      </button>
+      <div class="modal-body" id="modalContent"></div>
+    </article>
+  </div>
+
+  <script src="js/main.js"></script>
+</body>
+</html>
