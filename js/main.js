@@ -12,6 +12,9 @@ const projects = [
     categoryLabel: "Pintura",
     technique: "Pintura a óleo sobre tela",
     images: ["assets/img/exposicao-da-alma.jpg"],
+    orientation: "portrait",
+    previewFit: "contain",
+    previewPosition: "center 42%",
     description: "A pintura apresenta um corpo fragmentado rodeado por várias mãos, centradas numa abertura no meio do peito. A composição procura representar a alma como um espaço interior exposto, vulnerável e em tensão. A predominância dos tons vermelhos constrói uma atmosfera intensa e inquietante.",
     skills: "composição, representação do corpo, expressividade cromática, pintura a óleo, construção simbólica"
   },
@@ -23,6 +26,9 @@ const projects = [
     categoryLabel: "Pintura",
     technique: "Pintura a óleo sobre tela",
     images: ["assets/img/overflow.jpg"],
+    orientation: "portrait",
+    previewFit: "contain",
+    previewPosition: "center 44%",
     description: "Esta pintura representa uma figura curvada, atravessada por uma explosão de linhas luminosas na zona do tronco. A imagem sugere um momento de rutura, sobrecarga ou libertação interior, funcionando como uma representação intensa e instável da alma.",
     skills: "figura humana, dinamismo compositivo, contraste cromático, expressividade gestual, pintura a óleo"
   },
@@ -34,6 +40,9 @@ const projects = [
     categoryLabel: "Pintura",
     technique: "Pintura a óleo sobre tela",
     images: ["assets/img/coracao-exposto.jpg"],
+    orientation: "portrait",
+    previewFit: "contain",
+    previewPosition: "center 42%",
     description: "A composição articula olhos, formas orgânicas e um coração suspenso para construir uma imagem ligada aos sentimentos e à vulnerabilidade emocional. A obra aproxima-se de uma linguagem simbólica e surreal, criando uma atmosfera psicológica e inquietante.",
     skills: "simbolismo visual, composição, relação entre forma e significado, pintura a óleo, construção de atmosfera"
   },
@@ -45,6 +54,9 @@ const projects = [
     categoryLabel: "Ilustração digital",
     technique: "Ilustração digital",
     images: ["assets/img/mundos-fantasticos.png"],
+    orientation: "landscape",
+    previewFit: "contain",
+    previewPosition: "center",
     description: "Esta ilustração digital desenvolve-se em torno da criação de um universo imaginário, construído através da representação de seres diferenciados inseridos num ambiente fantástico e noturno. Explora a relação entre natureza, ficção e estranheza visual.",
     skills: "composição digital, construção de ambiente, cor, estilização visual, imaginação narrativa"
   },
@@ -56,6 +68,9 @@ const projects = [
     categoryLabel: "Ilustração digital",
     technique: "Ilustração digital",
     images: ["assets/img/veado-em-chamas.png"],
+    orientation: "portrait",
+    previewFit: "contain",
+    previewPosition: "center",
     description: "Esta ilustração digital parte da temática dos incêndios em Portugal, recorrendo à figura do veado como elemento simbólico central. O contraste entre o azul profundo e os tons vermelhos e laranja acentua uma atmosfera de tensão, destruição e vulnerabilidade.",
     skills: "composição, simbolismo visual, contraste cromático, narrativa visual, ilustração digital"
   },
@@ -67,6 +82,9 @@ const projects = [
     categoryLabel: "Ilustração digital",
     technique: "Ilustração digital",
     images: ["assets/img/sardinha-estrutura.jpg", "assets/img/sardinha-azulejo.jpg"],
+    orientation: "wide",
+    previewFit: "contain",
+    previewPosition: "center",
     description: "Conjunto de propostas desenvolvido no âmbito de um concurso, tomando a forma da sardinha como suporte para exploração visual, composição e experimentação gráfica. As peças exploram soluções distintas entre tradição, simplificação formal e referência cultural.",
     skills: "composição, adaptação formal, criatividade gráfica, ilustração digital"
   },
@@ -78,6 +96,9 @@ const projects = [
     categoryLabel: "Animação",
     technique: "Animação / composição / experimentação",
     images: ["assets/img/autorretrato-fundo-claro.png"],
+    orientation: "portrait",
+    previewFit: "contain",
+    previewPosition: "center",
     description: "Espaço reservado para acrescentar o projeto de animação quando estiver finalizado. A página já está preparada para receber imagens finais, frames, estudos ou vídeo.",
     skills: "movimento, sequência, narrativa visual, composição temporal"
   }
@@ -88,18 +109,27 @@ const categories = [
     key: "pintura",
     title: "Pintura",
     image: "assets/img/exposicao-da-alma.jpg",
+    orientation: "portrait",
+    previewFit: "contain",
+    previewPosition: "center 42%",
     description: "Trabalhos em óleo sobre tela, composição e expressão cromática."
   },
   {
     key: "digital",
     title: "Ilustração digital",
     image: "assets/img/mundos-fantasticos.png",
+    orientation: "landscape",
+    previewFit: "contain",
+    previewPosition: "center",
     description: "Construção visual, ambientes imaginários e experimentação gráfica."
   },
   {
     key: "animacao",
     title: "Animação",
     image: "assets/img/autorretrato-fundo-claro.png",
+    orientation: "portrait",
+    previewFit: "contain",
+    previewPosition: "center",
     description: "Movimento, sequência e projetos ainda em desenvolvimento."
   }
 ];
@@ -109,6 +139,17 @@ const categoryColors = {
   digital: "#233B73",
   animacao: "#7B8B5A"
 };
+
+function getPreviewClasses(item) {
+  const orientation = item.orientation || "portrait";
+  const fit = item.previewFit || "cover";
+  return `is-${orientation} fit-${fit}`;
+}
+
+function getPreviewStyle(item, accent) {
+  const position = item.previewPosition || "center";
+  return `--accent:${accent}; --preview-position:${position};`;
+}
 
 /* ──────────────────────────────────────────────
    DOM helpers
@@ -131,6 +172,9 @@ const navToggle = $("#navToggle");
 const mainNav = $("#mainNav");
 const header = $(".site-header");
 const navLinks = $$("[data-nav]");
+const topLinks = $$('a[href="#topo"]');
+const scrollProgressBar = $("#scrollProgressBar");
+const floatingTop = $("#floatingTop");
 
 /* Track the element that opened the modal so we can restore focus */
 let previouslyFocusedElement = null;
@@ -147,6 +191,33 @@ function initScrollReveal() {
   /* Respect prefers-reduced-motion */
   const prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
+  const revealTargets = [
+    ".hero-copy",
+    ".hero-projects",
+    ".process .section-shell > h2",
+    ".process .section-lead",
+    ".process-card",
+    ".about .section-kicker",
+    ".about-grid",
+    ".about-cta",
+    ".projects-intro",
+    ".filter-bar",
+    ".category-gallery",
+    ".project-detail-head",
+    ".gallery",
+    ".contact-heading",
+    ".contact-grid"
+  ];
+
+  if (!("IntersectionObserver" in window) || prefersReduced) {
+    revealTargets.forEach((selector) => {
+      $$(selector).forEach((el) => {
+        el.classList.add("reveal-ready", "revealed");
+      });
+    });
+    return;
+  }
+
   const revealObserver = new IntersectionObserver(
     (entries) => {
       entries.forEach((entry) => {
@@ -159,31 +230,8 @@ function initScrollReveal() {
     { threshold: 0.12, rootMargin: "0px 0px -40px 0px" }
   );
 
-  /* Mark elements for reveal */
-  const revealTargets = [
-    ".hero-copy",
-    ".hero-projects",
-    ".process .section-shell > h2",
-    ".process .section-lead",
-    ".process-card",
-    ".about .section-kicker",
-    ".about-grid",
-    ".about-cta",
-    ".projects > .section-shell > h2",
-    ".projects-sub",
-    ".filter-bar",
-    ".category-gallery",
-    ".project-detail-head",
-    ".contact-heading",
-    ".contact-grid"
-  ];
-
   revealTargets.forEach((selector) => {
     $$(selector).forEach((el, i) => {
-      if (prefersReduced) {
-        el.classList.add("reveal-ready", "revealed");
-        return;
-      }
       el.classList.add("reveal-ready");
       el.style.transitionDelay = `${i * 0.07}s`;
       revealObserver.observe(el);
@@ -232,9 +280,10 @@ function renderCategories() {
   categoryGallery.innerHTML = categories
     .map(
       (category, index) => `
-    <a class="category-card ${category.key}"
+    <a class="category-card ${category.key} ${getPreviewClasses(category)}"
             href="projetos.html?categoria=${category.key}"
             data-filter="${category.key}"
+            style="${getPreviewStyle(category, categoryColors[category.key])}"
             aria-label="Ver categoria ${category.title}">
       <div class="category-thumb">
         <img src="${category.image}" alt="${category.title}" loading="lazy" />
@@ -287,12 +336,12 @@ function insertProjectCards(visibleProjects, prefersReduced) {
   gallery.innerHTML = visibleProjects
     .map(
       (project, index) => `
-    <a class="card ${project.category} ${prefersReduced ? "" : "card-enter"}"
+    <a class="card ${project.category} ${getPreviewClasses(project)} ${prefersReduced ? "" : "card-enter"}"
             id="${project.id}"
             href="projetos.html#${project.id}"
             data-id="${project.id}"
             aria-label="Abrir projeto ${project.title}"
-            style="--stagger: ${index}">
+            style="${getPreviewStyle(project, categoryColors[project.category])} --stagger: ${index}">
       <div class="card-thumb">
         <img src="${project.images[0]}" alt="${project.title}" loading="lazy" />
       </div>
@@ -559,6 +608,12 @@ function updateActiveNav() {
   requestAnimationFrame(() => {
     const y = window.scrollY;
     if (header) header.classList.toggle("scrolled", y > 40);
+    if (scrollProgressBar) {
+      const scrollableHeight = document.documentElement.scrollHeight - window.innerHeight;
+      const progress = scrollableHeight > 0 ? Math.min(y / scrollableHeight, 1) : 0;
+      scrollProgressBar.style.transform = `scaleX(${progress})`;
+    }
+    if (floatingTop) floatingTop.classList.toggle("visible", y > 420);
     setActivePageNav();
     scrollTicking = false;
   });
@@ -658,6 +713,16 @@ function initEventListeners() {
     });
   });
 
+  topLinks.forEach((link) => {
+    link.addEventListener("click", (event) => {
+      event.preventDefault();
+      if (mainNav) mainNav.classList.remove("open");
+      if (navToggle) navToggle.setAttribute("aria-expanded", "false");
+      const prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      window.scrollTo({ top: 0, behavior: prefersReduced ? "auto" : "smooth" });
+    });
+  });
+
   /* Close modal buttons */
   $$("[data-close-modal]").forEach((element) => {
     element.addEventListener("click", closeModal);
@@ -696,52 +761,6 @@ function init() {
   setActiveFilter(initialFilter);
   renderProjects(initialFilter);
   updateActiveNav();
-
-  /* ==========================================================================
-     Scroll Reveal Animation System
-     ========================================================================== */
-  (function initReveal() {
-    const revealTargets = [
-      ".hero-shell",
-      ".process .section-shell",
-      ".about .section-shell",
-      ".filter-bar",
-      ".category-gallery",
-      ".project-detail-head",
-      ".gallery",
-      ".contact .section-shell",
-      ".site-footer"
-    ];
-
-    // Add reveal class to all targets
-    revealTargets.forEach(selector => {
-      const el = document.querySelector(selector);
-      if (el) el.classList.add("reveal");
-    });
-
-    // Use IntersectionObserver for performant scroll detection
-    if ("IntersectionObserver" in window) {
-      const observer = new IntersectionObserver(
-        (entries) => {
-          entries.forEach(entry => {
-            if (entry.isIntersecting) {
-              entry.target.classList.add("visible");
-              observer.unobserve(entry.target); // Only animate once
-            }
-          });
-        },
-        {
-          threshold: 0.12,
-          rootMargin: "0px 0px -40px 0px"
-        }
-      );
-
-      document.querySelectorAll(".reveal").forEach(el => observer.observe(el));
-    } else {
-      // Fallback: show everything immediately
-      document.querySelectorAll(".reveal").forEach(el => el.classList.add("visible"));
-    }
-  })();
 
   /* Set up interactions */
   initEventListeners();
