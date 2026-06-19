@@ -1,4 +1,4 @@
-# Portfólio Alicia Martins
+# Portfólio Alícia Martins
 
 Projeto estático em HTML, CSS e JavaScript, organizado em páginas separadas para Home, Sobre Mim, Projetos e Contacto.
 
