@@ -97,8 +97,9 @@ const projects = [
     technique: "Animação / composição / experimentação",
     images: ["assets/img/autorretrato-fundo-claro.png"],
     orientation: "portrait",
-    previewFit: "contain",
+    previewFit: "blank",
     previewPosition: "center",
+    isFuture: true,
     description: "Espaço reservado para acrescentar o projeto de animação quando estiver finalizado. A página já está preparada para receber imagens finais, frames, estudos ou vídeo.",
     skills: "movimento, sequência, narrativa visual, composição temporal"
   }
@@ -128,8 +129,9 @@ const categories = [
     title: "Animação",
     image: "assets/img/autorretrato-fundo-claro.png",
     orientation: "portrait",
-    previewFit: "contain",
+    previewFit: "blank",
     previewPosition: "center",
+    isFuture: true,
     description: "Movimento, sequência e projetos ainda em desenvolvimento."
   }
 ];
@@ -143,12 +145,21 @@ const categoryColors = {
 function getPreviewClasses(item) {
   const orientation = item.orientation || "portrait";
   const fit = item.previewFit || "cover";
-  return `is-${orientation} fit-${fit}`;
+  return `is-${orientation} fit-${fit}${item.isFuture ? " is-future" : ""}`;
 }
 
 function getPreviewStyle(item, accent) {
   const position = item.previewPosition || "center";
   return `--accent:${accent}; --preview-position:${position};`;
+}
+
+function renderPreviewMedia(item, altText) {
+  if (item.isFuture) {
+    return `<span class="future-placeholder" aria-hidden="true">Em desenvolvimento</span>`;
+  }
+
+  const image = item.image || (item.images && item.images[0]);
+  return `<img src="${image}" alt="${altText}" loading="lazy" />`;
 }
 
 /* ──────────────────────────────────────────────
@@ -286,7 +297,7 @@ function renderCategories() {
             style="${getPreviewStyle(category, categoryColors[category.key])}"
             aria-label="Ver categoria ${category.title}">
       <div class="category-thumb">
-        <img src="${category.image}" alt="${category.title}" loading="lazy" />
+        ${renderPreviewMedia(category, category.title)}
       </div>
       <div class="category-body">
         <span>${String(index + 1).padStart(2, "0")}</span>
@@ -323,19 +334,31 @@ function renderProjects(filter = "all") {
 
     /* Wait for exit animation, then render new cards */
     const onTransitionDone = () => {
-      insertProjectCards(visibleProjects, prefersReduced);
+      insertProjectCards(visibleProjects, prefersReduced, filter);
     };
     /* Use a short timeout matching the CSS exit transition */
     setTimeout(onTransitionDone, 220);
   } else {
-    insertProjectCards(visibleProjects, prefersReduced);
+    insertProjectCards(visibleProjects, prefersReduced, filter);
   }
 }
 
-function insertProjectCards(visibleProjects, prefersReduced) {
-  gallery.innerHTML = visibleProjects
-    .map(
-      (project, index) => `
+function getProjectGroups(visibleProjects, filter) {
+  const visibleCategories =
+    filter === "all"
+      ? categories
+      : categories.filter((category) => category.key === filter);
+
+  return visibleCategories
+    .map((category) => ({
+      category,
+      projects: visibleProjects.filter((project) => project.category === category.key)
+    }))
+    .filter((group) => group.projects.length > 0);
+}
+
+function renderProjectCard(project, index, prefersReduced) {
+  return `
     <a class="card ${project.category} ${getPreviewClasses(project)} ${prefersReduced ? "" : "card-enter"}"
             id="${project.id}"
             href="projetos.html#${project.id}"
@@ -343,7 +366,7 @@ function insertProjectCards(visibleProjects, prefersReduced) {
             aria-label="Abrir projeto ${project.title}"
             style="${getPreviewStyle(project, categoryColors[project.category])} --stagger: ${index}">
       <div class="card-thumb">
-        <img src="${project.images[0]}" alt="${project.title}" loading="lazy" />
+        ${renderPreviewMedia(project, project.title)}
       </div>
       <div class="card-body">
         <div class="card-meta">
@@ -354,6 +377,28 @@ function insertProjectCards(visibleProjects, prefersReduced) {
         <p>${project.technique}</p>
       </div>
     </a>
+  `;
+}
+
+function insertProjectCards(visibleProjects, prefersReduced, filter = "all") {
+  const groups = getProjectGroups(visibleProjects, filter);
+  let cardIndex = 0;
+
+  gallery.innerHTML = groups
+    .map(
+      ({ category, projects: groupProjects }) => `
+    <section class="project-group ${category.key}" style="--accent:${categoryColors[category.key]}">
+      <header class="project-group-head">
+        <div>
+          <span>Categoria</span>
+          <h3>${category.title}</h3>
+        </div>
+        <p>${category.description}</p>
+      </header>
+      <div class="project-group-grid">
+        ${groupProjects.map((project) => renderProjectCard(project, cardIndex++, prefersReduced)).join("")}
+      </div>
+    </section>
   `
     )
     .join("");
@@ -466,8 +511,12 @@ function openProject(id, options = {}) {
 
   modalContent.innerHTML = `
     <div class="modal-hero" style="--accent:${categoryColors[project.category]}">
-      <div class="modal-gallery">
-        ${project.images.map((image) => `<img src="${image}" alt="${project.title}" />`).join("")}
+      <div class="modal-gallery ${project.isFuture ? "is-future" : ""}">
+        ${
+          project.isFuture
+            ? `<span class="future-placeholder" aria-hidden="true">Em desenvolvimento</span>`
+            : project.images.map((image) => `<img src="${image}" alt="${project.title}" />`).join("")
+        }
       </div>
       <div class="modal-info">
         <span class="cat-badge">${project.categoryLabel}</span>
