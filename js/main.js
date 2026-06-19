@@ -105,6 +105,9 @@ const projects = [
   }
 ];
 
+const detailedProjects = projects.filter((project) => !project.isFuture);
+const developmentProjects = projects.filter((project) => project.isFuture);
+
 const categories = [
   {
     key: "pintura",
@@ -142,6 +145,10 @@ const categoryColors = {
   animacao: "#7B8B5A"
 };
 
+const detailedCategories = categories.filter((category) =>
+  detailedProjects.some((project) => project.category === category.key)
+);
+
 function getPreviewClasses(item) {
   const orientation = item.orientation || "portrait";
   const fit = item.previewFit || "cover";
@@ -175,7 +182,9 @@ const $$ = (selector) => document.querySelectorAll(selector);
 
 const categoryGallery = $("#categoryGallery");
 const gallery = $("#gallery");
+const futureProjectsContainer = $("#futureProjects");
 const projectDetails = $("#detalhados");
+const processSection = $("#processo");
 const modal = $("#projectModal");
 const modalContent = $("#modalContent");
 const modalPanel = modal ? modal.querySelector(".modal-panel") : null;
@@ -191,7 +200,7 @@ const floatingTop = $("#floatingTop");
 let previouslyFocusedElement = null;
 /* Track current filter */
 let currentFilter = "all";
-const validFilters = ["all", ...categories.map((category) => category.key)];
+const validFilters = ["all", ...detailedCategories.map((category) => category.key)];
 
 /* ──────────────────────────────────────────────
    1. Scroll-based reveal animations
@@ -289,11 +298,15 @@ function attachImageLoadHandlers(container) {
 function renderCategories() {
   if (!categoryGallery) return;
   categoryGallery.innerHTML = categories
-    .map(
-      (category, index) => `
+    .map((category, index) => {
+      const target = category.isFuture ? "processo" : "detalhados";
+      const href = category.isFuture ? "projetos.html#processo" : `projetos.html?categoria=${category.key}#detalhados`;
+
+      return `
     <a class="category-card ${category.key} ${getPreviewClasses(category)}"
-            href="projetos.html?categoria=${category.key}"
+            href="${href}"
             data-filter="${category.key}"
+            data-target="${target}"
             style="${getPreviewStyle(category, categoryColors[category.key])}"
             aria-label="Ver categoria ${category.title}">
       <div class="category-thumb">
@@ -305,8 +318,8 @@ function renderCategories() {
         <p>${category.description}</p>
       </div>
     </a>
-  `
-    )
+  `;
+    })
     .join("");
 
   attachImageLoadHandlers(categoryGallery);
@@ -322,8 +335,8 @@ function renderProjects(filter = "all") {
 
   const visibleProjects =
     filter === "all"
-      ? projects
-      : projects.filter((project) => project.category === filter);
+      ? detailedProjects
+      : detailedProjects.filter((project) => project.category === filter);
 
   const prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
@@ -346,8 +359,8 @@ function renderProjects(filter = "all") {
 function getProjectGroups(visibleProjects, filter) {
   const visibleCategories =
     filter === "all"
-      ? categories
-      : categories.filter((category) => category.key === filter);
+      ? detailedCategories
+      : detailedCategories.filter((category) => category.key === filter);
 
   return visibleCategories
     .map((category) => ({
@@ -378,6 +391,37 @@ function renderProjectCard(project, index, prefersReduced) {
       </div>
     </a>
   `;
+}
+
+function renderDevelopmentProjectCard(project, index) {
+  return `
+    <a class="development-project-card ${project.category}"
+            id="${project.id}"
+            href="projetos.html#${project.id}"
+            data-id="${project.id}"
+            aria-label="Abrir projeto em desenvolvimento ${project.title}"
+            style="${getPreviewStyle(project, categoryColors[project.category])} --stagger: ${index}">
+      <div class="development-project-preview">
+        ${renderPreviewMedia(project, project.title)}
+      </div>
+      <div class="development-project-info">
+        <div class="development-project-meta">
+          <span>${project.categoryLabel}</span>
+          <span>${project.year}</span>
+        </div>
+        <h3>${project.title}</h3>
+        <p>${project.technique}</p>
+      </div>
+    </a>
+  `;
+}
+
+function renderDevelopmentProjects() {
+  if (!futureProjectsContainer) return;
+
+  futureProjectsContainer.innerHTML = developmentProjects
+    .map((project, index) => renderDevelopmentProjectCard(project, index))
+    .join("");
 }
 
 function insertProjectCards(visibleProjects, prefersReduced, filter = "all") {
@@ -595,8 +639,9 @@ function openProjectFromHash() {
     return;
   }
 
-  setActiveFilter(hashProject.category);
-  renderProjects(hashProject.category);
+  const filter = hashProject.isFuture ? "all" : hashProject.category;
+  setActiveFilter(filter);
+  renderProjects(filter);
   openProject(hashProject.id, { updateHash: false });
 }
 
@@ -729,10 +774,27 @@ function initEventListeners() {
       if (!card) return;
       event.preventDefault();
 
+      if (card.dataset.target === "processo") {
+        setActiveFilter("all");
+        renderProjects("all");
+        updateProjectUrl("all", { hash: "processo" });
+        if (processSection) processSection.scrollIntoView({ behavior: "smooth", block: "start" });
+        return;
+      }
+
       setActiveFilter(card.dataset.filter);
       renderProjects(card.dataset.filter);
       updateProjectUrl(card.dataset.filter, { hash: "detalhados" });
       if (projectDetails) projectDetails.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  }
+
+  if (futureProjectsContainer) {
+    futureProjectsContainer.addEventListener("click", (event) => {
+      const card = event.target.closest(".development-project-card");
+      if (!card) return;
+      event.preventDefault();
+      openProject(card.dataset.id);
     });
   }
 
@@ -807,6 +869,7 @@ function init() {
   if (yearEl) $("#year").textContent = new Date().getFullYear();
   const initialFilter = getInitialProjectFilter();
   renderCategories();
+  renderDevelopmentProjects();
   setActiveFilter(initialFilter);
   renderProjects(initialFilter);
   updateActiveNav();
