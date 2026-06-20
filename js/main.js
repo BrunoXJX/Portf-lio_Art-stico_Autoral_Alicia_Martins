@@ -393,6 +393,18 @@ function renderProjectCard(project, index, prefersReduced) {
   `;
 }
 
+function renderSkillTags(skills) {
+  if (!skills) return "";
+
+  return skills
+    .split(",")
+    .map((skill) => skill.trim())
+    .filter(Boolean)
+    .slice(0, 4)
+    .map((skill) => `<span>${skill}</span>`)
+    .join("");
+}
+
 function renderDevelopmentProjectCard(project, index) {
   return `
     <a class="development-project-card ${project.category}"
@@ -410,7 +422,10 @@ function renderDevelopmentProjectCard(project, index) {
           <span>${project.year}</span>
         </div>
         <h3>${project.title}</h3>
-        <p>${project.technique}</p>
+        <p>${project.description}</p>
+        <div class="development-tags" aria-label="Competências previstas">
+          ${renderSkillTags(project.skills)}
+        </div>
       </div>
     </a>
   `;
