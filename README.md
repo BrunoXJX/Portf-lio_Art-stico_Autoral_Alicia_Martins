@@ -4,10 +4,8 @@ Projeto estático em HTML, CSS e JavaScript, organizado em páginas separadas pa
 
 ## Como abrir
 
-1. Abre a pasta `portfolio-alicia` no Visual Studio Code.
-2. Instala a extensão **Live Server** se ainda não tiveres.
-3. Clica com o botão direito em `index.html`.
-4. Escolhe **Open with Live Server**.
+1. Abre a pasta `portfolio-alicia`.
+2. Abre `index.html` diretamente no navegador ou usa um servidor estático local.
 
 Também podes abrir diretamente o ficheiro `index.html` no navegador.
 
